@@ -20,7 +20,7 @@ for (iter in seq_len(2)) {
 }
 ## results
 set.seed(1)
-cl <- makeCluster(50)
+cl <- makeCluster(10)
 registerDoParallel(cl)
 out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
   library(Rcpp)
@@ -84,7 +84,7 @@ for (iter in seq_len(2)) {
 }
 ## results
 set.seed(1)
-cl <- makeCluster(50)
+cl <- makeCluster(10)
 registerDoParallel(cl)
 out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
   library(Rcpp)
@@ -148,7 +148,7 @@ for (iter in seq_len(4)) {
 }
 ## results
 set.seed(1)
-cl <- makeCluster(50)
+cl <- makeCluster(10)
 registerDoParallel(cl)
 out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
   library(Rcpp)
@@ -222,7 +222,7 @@ for (iter in seq_len(4)) {
 }
 ## results
 set.seed(1)
-cl <- makeCluster(50)
+cl <- makeCluster(10)
 registerDoParallel(cl)
 out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
   library(Rcpp)
@@ -300,7 +300,7 @@ for (iter in seq_len(4)) {
 }
 ## results
 set.seed(1)
-cl <- makeCluster(50)
+cl <- makeCluster(10)
 registerDoParallel(cl)
 out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
   library(Rcpp)
