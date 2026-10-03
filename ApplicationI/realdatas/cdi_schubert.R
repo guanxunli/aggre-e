@@ -5,6 +5,7 @@ library(RcppArmadillo)
 sourceCpp("ApplicationI/utilities.cpp")
 library(MicrobiomeStat)
 alpha <- 0.2
+dir.create("ApplicationI/results", recursive = TRUE, showWarnings = FALSE)
 otu_file <- "ApplicationI/datasets/cdi_schubert_results/RDP/cdi_schubert.otu_table.100.denovo.rdp_assigned"
 meta_file <- "ApplicationI/datasets/cdi_schubert_results/cdi_schubert.metadata.txt"
 
@@ -54,22 +55,22 @@ options(warn = 0)
 #### run BC method
 ## joint BC
 res_joint <- bc_fun_cpp(p_value = pval_vec, alpha = alpha)
-index_joint <- res_joint$index_select
+index_joint <- res_joint$index_select + 1L
 table(phylum_vector[index_joint])
 
 ## average eBH
-eval_ave <- numeric(nsample)
+eval_ave <- numeric(ntaxon)
 for (iter_group in seq_len(n_group)) {
   index_tmp <- which(phylum_vector == phylum_use[iter_group])
   p_tmp <- pval_vec[index_tmp]
   res_tmp <- bc_fun_cpp(p_value = p_tmp, alpha = alpha)
   eval_ave[index_tmp] <- res_tmp$evalue
 }
-index_ave <- ebh_fun_cpp(eval_ave, alpha = alpha)
+index_ave <- ebh_fun_cpp(eval_ave, alpha = alpha) + 1L
 table(phylum_vector[index_ave])
 
 ## weighted eBH
-eval_weight <- numeric(nsample)
+eval_weight <- numeric(ntaxon)
 for (iter_group in seq_len(n_group)) {
   index_tmp <- which(phylum_vector == phylum_use[iter_group])
   n_tmp <- length(index_tmp)
@@ -77,7 +78,7 @@ for (iter_group in seq_len(n_group)) {
   res_tmp <- bc_fun_cpp(p_value = p_tmp, alpha = alpha)
   eval_weight[index_tmp] <- ntaxon / (n_group * n_tmp) * res_tmp$evalue
 }
-index_weight <- ebh_fun_cpp(eval_weight, alpha = alpha)
+index_weight <- ebh_fun_cpp(eval_weight, alpha = alpha) + 1L
 table(phylum_vector[index_weight])
 
 ## adaptive eBH
@@ -87,6 +88,6 @@ res_weight <- ebh_apa_cpp(
   pvalue_list = pvalue_list, alpha_bc = alpha,
   alpha_ebh = alpha
 )
-index_tmp <- res_weight$index_select
+index_tmp <- res_weight$index_select + 1L
 index_weight <- unlist(index_list)[index_tmp]
 table(phylum_vector[index_weight])

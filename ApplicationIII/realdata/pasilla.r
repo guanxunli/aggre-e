@@ -26,7 +26,7 @@ coldata <- coldata[colnames(cts), c("condition", "type")]
 stopifnot(all(rownames(coldata) == colnames(cts))) # sanity check
 
 # ---- 2) Build DESeq2 object & run DE ----
-# Include 'type' (single vs paired) as a nuisance covariate, analogous to '~ cell + dex' in airway
+# The design includes only the library type (single vs paired)
 dds <- DESeqDataSetFromMatrix(
   countData = cts,
   colData = coldata,
@@ -34,7 +34,7 @@ dds <- DESeqDataSetFromMatrix(
 ) %>%
   DESeq()
 
-# Contrast: treated vs untreated (this name is created from the design)
+# Contrast: paired vs single (library type)
 deRes <- as.data.frame(results(dds))
 # deRes <- na.omit(deRes)
 
@@ -53,7 +53,7 @@ x_covariate <- x
 alpha_vec <- seq(0.01, 0.1, by = 0.01)
 n_alpha <- length(alpha_vec)
 n_method <- 5
-source("ApplicationIII/real_data/utility.R")
+source("ApplicationIII/realdata/utility.R")
 
 set.seed(2011)
 outres <- list()
@@ -64,4 +64,4 @@ for (iter_alpha in seq_len(n_alpha)) {
 }
 res_mat <- matrix(unlist(outres), nrow = n_method, ncol = n_alpha)
 print(res_mat)
-saveRDS(res_mat, paste0("ApplicationIII/real_data/results/pasilla_res.rds"))
+saveRDS(res_mat, paste0("ApplicationIII/realdata/results/pasilla_res.rds"))

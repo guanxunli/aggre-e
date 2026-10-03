@@ -12,11 +12,6 @@ simu_fun <- function(alpha_use) {
   index_select <- which(p_adj <= alpha_use)
   bh_res <- length(index_select)
 
-  # ################## BC method ##################
-  # bc_fit <- bc_fun_cpp(pvalue_vec, alpha_use)
-  # index_select <- bc_fit$index_select + 1
-  # bc_res <- length(index_select)
-  
   ################## IHW ##################
   ihw_res <- try(IHW::ihw(pvalue_vec, x_covariate, alpha_use
   ), silent = TRUE)
@@ -25,25 +20,6 @@ simu_fun <- function(alpha_use) {
   } else {
     ihw_res <- sum(IHW::adj_pvalues(ihw_res) <= alpha_use)
   }
-  # ################## IHW Storey ##################
-  # ihw_storey <- try(IHWStatsPaper::ihw_bh(pvalue_vec, x_covariate, alpha_use,
-  #                                         Storey = TRUE
-  # ), silent = TRUE)
-  # if (class(ihw_storey) == "try-error") {
-  #   ihw_storey_res <- 0
-  # } else {
-  #   ihw_storey_res <- sum(ihw_storey)
-  # }
-
-  # ################## IHW betamix ##################
-  # ihw_betamix <- try(IHWStatsPaper::ihw_betamix_censored(pvalue_vec, x_covariate, alpha_use,
-  #                                                        Storey = TRUE
-  # ), silent = TRUE)
-  # if (class(ihw_betamix) == "try-error") {
-  #   ihw_betamix_res <- 0
-  # } else {
-  #   ihw_betamix_res <- sum(ihw_betamix)
-  # }
 
   ################## AdaPT ##################
   ## load data
@@ -87,10 +63,6 @@ simu_fun <- function(alpha_use) {
   ebh_res <- length(index_select)
 
   ################## save results ##################
-  # return(c(
-  #   bh_res, ihw_storey_res, ihw_betamix_res,
-  #   adapt_res, sabha_res, ebh_res
-  # ))
   return(c(
     bh_res, ihw_res, adapt_res, sabha_res, ebh_res
   ))

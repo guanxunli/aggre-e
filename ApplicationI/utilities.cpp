@@ -8,10 +8,18 @@ Rcpp::List bc_fun_cpp(const arma::vec &p_value, double alpha = 0.05)
 {
   // initialization
   int n = p_value.n_elem;
+  if (!p_value.is_finite() || arma::any(p_value < 0.0) || arma::any(p_value > 1.0))
+  {
+    Rcpp::stop("p-values must be finite and lie in [0, 1]");
+  }
+  if (!(alpha > 0.0 && alpha < 1.0))
+  {
+    Rcpp::stop("alpha must lie in (0, 1)");
+  }
   arma::uvec index_select;
   double e_tmp = 0;
   double thres = 0;
-  double num = 1.0;
+  double num = 1.0 + arma::sum(p_value >= 1.0);
   arma::vec evalue = arma::zeros(n);
   // order p-value
   double p_tmp, dom, hat_fdp;
@@ -26,8 +34,12 @@ Rcpp::List bc_fun_cpp(const arma::vec &p_value, double alpha = 0.05)
     else
     {
       p_tmp = ordered_p(iter);
+      if (p_tmp >= 0.5)
+      {
+        continue;
+      }
       num = 1 + arma::sum(p_value >= (1 - p_tmp));
-      dom = n - iter;
+      dom = arma::sum(p_value <= p_tmp);
       hat_fdp = (double)num / dom;
       if (hat_fdp <= alpha)
       {
@@ -51,6 +63,14 @@ arma::uvec ebh_fun_cpp(const arma::vec &e_value, double alpha = 0.05)
 {
   // initialization
   int n = e_value.n_elem;
+  if (!e_value.is_finite() || arma::any(e_value < 0.0))
+  {
+    Rcpp::stop("e-values must be finite and nonnegative");
+  }
+  if (!(alpha > 0.0 && alpha < 1.0))
+  {
+    Rcpp::stop("alpha must lie in (0, 1)");
+  }
   arma::vec ordered_evalue = arma::sort(e_value, "ascend");
   arma::uvec index_select;
   double e_tmp, thres;
@@ -65,9 +85,9 @@ arma::uvec ebh_fun_cpp(const arma::vec &e_value, double alpha = 0.05)
     {
       e_tmp = ordered_evalue(iter);
       thres = (double)n / (alpha * (n - iter));
-      if (e_tmp + 1e-10 >= thres)
+      if (e_tmp >= thres)
       {
-        index_select = arma::find(e_value >= e_tmp);
+        index_select = arma::find(e_value >= thres);
         break;
       }
     }

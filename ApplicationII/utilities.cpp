@@ -2,11 +2,33 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 using namespace Rcpp;
 
+namespace
+{
+void validate_pvalues(const arma::vec &p_value)
+{
+  if (p_value.n_elem == 0 || !p_value.is_finite() ||
+      arma::any(p_value < 0.0) || arma::any(p_value > 1.0))
+  {
+    Rcpp::stop("p-values must be a nonempty finite vector in [0, 1]");
+  }
+}
+
+void validate_alpha(double alpha)
+{
+  if (!(alpha > 0.0 && alpha < 1.0))
+  {
+    Rcpp::stop("alpha must lie in (0, 1)");
+  }
+}
+}
+
 // BH function
 // [[Rcpp::export]]
 Rcpp::List bh_fun_cpp(const arma::vec &p_value, double alpha = 0.05)
 {
   // initialization
+  validate_pvalues(p_value);
+  validate_alpha(alpha);
   int n = p_value.n_elem;
   arma::uvec index_select;
   double e_tmp = 0;
@@ -48,6 +70,12 @@ Rcpp::List storey_fun_cpp(const arma::vec &p_value, double alpha = 0.05,
                           double lambda= 0.5)
 {
   // initialization
+  validate_pvalues(p_value);
+  validate_alpha(alpha);
+  if (!(lambda > 0.0 && lambda < 1.0))
+  {
+    Rcpp::stop("lambda must lie in (0, 1)");
+  }
   int n = p_value.n_elem;
   arma::uvec index_select, index_select_lambda;
   double e_tmp = 0;
@@ -56,7 +84,7 @@ Rcpp::List storey_fun_cpp(const arma::vec &p_value, double alpha = 0.05,
   arma::vec evalue = arma::zeros(n);
   // estimate pi_0
   int nreject_lambda = arma::sum(p_value <= lambda);
-  pi_0 = (1.0 + n - nreject_lambda) / ((1 - lambda) * n);
+  pi_0 = std::min(1.0, (1.0 + n - nreject_lambda) / ((1 - lambda) * n));
   // order p-value
   double p_tmp, thres;
   arma::vec ordered_p = arma::sort(p_value, "descend");
@@ -93,13 +121,15 @@ Rcpp::List storey_fun_cpp(const arma::vec &p_value, double alpha = 0.05,
 Rcpp::List bc_fun_cpp(const arma::vec &p_value, double alpha = 0.05)
 {
   // initialization
+  validate_pvalues(p_value);
+  validate_alpha(alpha);
   int n = p_value.n_elem;
   arma::uvec index_select;
   double e_tmp = 0;
   double tau = 0;
   arma::vec evalue = arma::zeros(n);
   // order p-value
-  double p_tmp, n_num, n_dom, hat_fdp;
+  double p_tmp, n_num = 1.0 + arma::sum(p_value >= 1.0), n_dom, hat_fdp;
   arma::vec ordered_p = arma::sort(p_value, "descend");
   // BC algorithm
   for (int iter = 0; iter <= n; ++iter)
@@ -111,8 +141,12 @@ Rcpp::List bc_fun_cpp(const arma::vec &p_value, double alpha = 0.05)
     else
     {
       p_tmp = ordered_p(iter);
+      if (p_tmp >= 0.5)
+      {
+        continue;
+      }
       n_num = 1 + arma::sum(p_value >= (1 - p_tmp));
-      n_dom = n - iter;
+      n_dom = arma::sum(p_value <= p_tmp);
       hat_fdp = (double)n_num / n_dom;
       if (hat_fdp <= alpha)
       {
@@ -134,6 +168,11 @@ Rcpp::List bc_fun_cpp(const arma::vec &p_value, double alpha = 0.05)
 arma::uvec ebh_fun_cpp(const arma::vec &e_value, double alpha = 0.05)
 {
   // initialization
+  if (e_value.n_elem == 0 || !e_value.is_finite() || arma::any(e_value < 0.0))
+  {
+    Rcpp::stop("e-values must be a nonempty finite nonnegative vector");
+  }
+  validate_alpha(alpha);
   int n = e_value.n_elem;
   arma::vec ordered_evalue = arma::sort(e_value, "ascend");
   arma::uvec index_select;
@@ -149,9 +188,9 @@ arma::uvec ebh_fun_cpp(const arma::vec &e_value, double alpha = 0.05)
     {
       e_tmp = ordered_evalue(iter);
       thres = (double)n / (alpha * (n - iter));
-      if (e_tmp + 1e-10 >= thres)
+      if (e_tmp >= thres)
       {
-        index_select = arma::find(e_value >= e_tmp);
+        index_select = arma::find(e_value >= thres);
         break;
       }
     }
@@ -199,7 +238,7 @@ Rcpp::List bhbc_ada(const arma::vec &p_value, double alpha_bh = 0.05,
   // double tau_bc = bc_res["tau_thres"];
 
   //// calculate weight
-  // tilde p vector
+  // Masking values used by the BC component.
   arma::vec tilde_p = arma::zeros(n);
   for (int iter_n = 0; iter_n < n; iter_n++)
   {
@@ -211,7 +250,8 @@ Rcpp::List bhbc_ada(const arma::vec &p_value, double alpha_bh = 0.05,
   Rcpp::List bhres_tmp;
   for (int iter_i = 0; iter_i < n; iter_i++)
   {
-    tildep_tmp = tilde_p;
+    // Equation (12): replace only p_i by zero in the original p-vector.
+    tildep_tmp = p_value;
     tildep_tmp(iter_i) = 0;
     bhres_tmp = bh_fun_cpp(tildep_tmp, alpha_bh);
     tau_bh_weight(iter_i) = bhres_tmp["tau_thres"];
@@ -245,7 +285,7 @@ Rcpp::List bhbc_ada(const arma::vec &p_value, double alpha_bh = 0.05,
         }
       }
       // BH weight
-      ave_wbh_tmp = (1 + sum(p_value >= 1 - tau_bc_weight)) / n;
+      ave_wbh_tmp = (1.0 + (double)arma::sum(p_value >= (1 - tau_bc_weight))) / n;
       w_bh_tmp = tau_bh_weight(iter_i) / (tau_bh_weight(iter_i) + ave_wbh_tmp);
       if (ISNAN(w_bh_tmp))
       {
@@ -289,7 +329,7 @@ Rcpp::List fastbhbc_ada(const arma::vec &p_value, double alpha_bh = 0.05,
   double ave_wbc = (double)n_num / n;
 
   //// calculate weight
-  // tilde p vector
+  // Masking values used by the BC component.
   arma::vec tilde_p = arma::zeros(n);
   for (int iter_n = 0; iter_n < n; iter_n++)
   {
@@ -301,7 +341,8 @@ Rcpp::List fastbhbc_ada(const arma::vec &p_value, double alpha_bh = 0.05,
   Rcpp::List bhres_tmp;
   for (int iter_i = 0; iter_i < n; iter_i++)
   {
-    tildep_tmp = tilde_p;
+    // Equation (12): replace only p_i by zero in the original p-vector.
+    tildep_tmp = p_value;
     tildep_tmp(iter_i) = 0;
     bhres_tmp = bh_fun_cpp(tildep_tmp, alpha_bh);
     tau_bh_weight(iter_i) = bhres_tmp["tau_thres"];
@@ -332,7 +373,7 @@ Rcpp::List fastbhbc_ada(const arma::vec &p_value, double alpha_bh = 0.05,
       tau_bc_weight_tmp = tau_bc_weight;
       tau_bc_weight_tmp(iter_i) = 1;
       // BH weight
-      ave_wbh_tmp = sum(p_value >= 1 - tau_bc_weight_tmp) / n;
+      ave_wbh_tmp = (double)arma::sum(p_value >= (1 - tau_bc_weight_tmp)) / n;
       w_bh_tmp = tau_bh_weight(iter_i) / (tau_bh_weight(iter_i) + ave_wbh_tmp);
       if (ISNAN(w_bh_tmp))
       {

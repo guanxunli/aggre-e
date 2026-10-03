@@ -1,6 +1,6 @@
 set.seed(1)
-source("stru_ada_bc/utility_sabha.R")
-source("stru_ada_bc/utility_cpp.R")
+source("ApplicationIII/utility_sabha.R")
+source("ApplicationIII/utility_cpp.R")
 #### define parameters
 n <- 3e3
 alpha <- 0.1
@@ -14,7 +14,7 @@ n_simu <- 1e2
 
 #### simulation function ####
 simu_fun <- function(a0, a1, af, signa_sten) {
-  time_res <- numeric(7)
+  time_res <- numeric(5)
   ## generate datasets
   # pi0
   x_covariate <- rnorm(n)
@@ -44,57 +44,25 @@ simu_fun <- function(a0, a1, af, signa_sten) {
     )
   }
   time_res[1] <- as.numeric(Sys.time() - time1, units = "secs")
-  
-  ################## BC method ##################
+
+  ################## IHW ##################
   time1 <- Sys.time()
-  bc_fit <- bc_fun_cpp(pvalue_vec, alpha)
-  index_select <- bc_fit$index_select + 1
-  bc_res <- numeric(2)
-  if (length(index_select) > 0) {
-    bc_res <- c(
-      length(intersect(index_select, index_alter)) / length(index_alter),
-      length(setdiff(index_select, index_alter)) / length(index_select)
-    )
+  ihw_fit <- try(IHW::ihw(pvalue_vec, x_covariate, alpha),
+    silent = TRUE
+  )
+  if (class(ihw_fit) == "try-error") {
+    ihw_res <- numeric(2)
+  } else {
+    ihw_res <- numeric(2)
+    index_select <- which(IHW::adj_pvalues(ihw_fit) <= alpha)
+    if (length(index_select) > 0) {
+      ihw_res <- c(
+        length(intersect(index_select, index_alter)) / length(index_alter),
+        length(setdiff(index_select, index_alter)) / length(index_select)
+      )
+    }
   }
   time_res[2] <- as.numeric(Sys.time() - time1, units = "secs")
-  
-  ################## IHW Storey ##################
-  tiem1 <- Sys.time()
-  x_mat <- cbind(x_covariate, x_covariate_f)
-  ihw_storey <- try(IHWStatsPaper::ihw_bh(pvalue_vec, x_mat, alpha,
-                                          Storey = TRUE
-  ), silent = TRUE)
-  if (class(ihw_storey) == "try-error") {
-    ihw_storey_res <- numeric(2)
-  } else {
-    ihw_storey_res <- numeric(2)
-    index_select <- which(ihw_storey == TRUE)
-    if (length(index_select) > 0) {
-      ihw_storey_res <- c(
-        length(intersect(index_select, index_alter)) / length(index_alter),
-        length(setdiff(index_select, index_alter)) / length(index_select)
-      )
-    }
-  }
-  time_res[3] <- as.numeric(Sys.time() - time1, units = "secs")
-  ################## IHW betamix ##################
-  time1 <- Sys.time()
-  ihw_betamix <- try(IHWStatsPaper::ihw_betamix_censored(pvalue_vec, x_mat, alpha,
-                                                         Storey = TRUE
-  ), silent = TRUE)
-  if (class(ihw_betamix) == "try-error") {
-    ihw_betamix_res <- numeric(2)
-  } else {
-    ihw_betamix_res <- numeric(2)
-    index_select <- which(ihw_betamix == TRUE)
-    if (length(index_select) > 0) {
-      ihw_betamix_res <- c(
-        length(intersect(index_select, index_alter)) / length(index_alter),
-        length(setdiff(index_select, index_alter)) / length(index_select)
-      )
-    }
-  }
-  time_res[4] <- as.numeric(Sys.time() - time1, units = "secs")
   ################## AdaPT ##################
   ## load data
   time1 <- Sys.time()
@@ -120,7 +88,7 @@ simu_fun <- function(a0, a1, af, signa_sten) {
       )
     }
   }
-  time_res[5] <- as.numeric(Sys.time() - time1, units = "secs")
+  time_res[3] <- as.numeric(Sys.time() - time1, units = "secs")
   ################## SABHA ##################
   time1 <- Sys.time()
   index0 <- order(x_covariate)
@@ -138,7 +106,7 @@ simu_fun <- function(a0, a1, af, signa_sten) {
       length(setdiff(index_select, index_alter)) / length(index_select)
     )
   }
-  time_res[6] <- as.numeric(Sys.time() - time1, units = "secs")
+  time_res[4] <- as.numeric(Sys.time() - time1, units = "secs")
   ################## cross_fit average ##################
   time1 <- Sys.time()
   #### try 1
@@ -155,19 +123,19 @@ simu_fun <- function(a0, a1, af, signa_sten) {
       length(setdiff(index_select, index_alter)) / length(index_select)
     )
   }
-  time_res[7] <- as.numeric(Sys.time() - time1, units = "secs")
+  time_res[5] <- as.numeric(Sys.time() - time1, units = "secs")
   
   ################## return results ##################
   return(time_res)
 }
 
 #### simulations ####
-a0 <- 2.5
+a0 <- 1.5
 a1 <- 2
 signa_sten <- 3
 set.seed(1)
 print(c(a0, a1, signa_sten))
-time_mat <- matrix(NA, nrow = n_simu, ncol = 7)
+time_mat <- matrix(NA, nrow = n_simu, ncol = 5)
 for (iter_simu in seq_len(n_simu)) {
   if (iter_simu %% 10 == 0) print(iter_simu)
   time_mat[iter_simu, ] <- simu_fun(a0, a1, af, signa_sten)

@@ -5,6 +5,7 @@ library(RcppArmadillo)
 sourceCpp("ApplicationI/utilities.cpp")
 library(MicrobiomeStat)
 alpha <- 0.2
+dir.create("ApplicationI/results", recursive = TRUE, showWarnings = FALSE)
 otu_file <- "ApplicationI/datasets/cdi_schubert_results/RDP/cdi_schubert.otu_table.100.denovo.rdp_assigned"
 meta_file <- "ApplicationI/datasets/cdi_schubert_results/cdi_schubert.metadata.txt"
 
@@ -83,13 +84,13 @@ for (iter in seq_len(100)) {
   #### run BC method
   ## joint BC
   res_joint1 <- bc_fun_cpp(p_value = pval_vec1, alpha = alpha)
-  index_joint1 <- res_joint1$index_select
+  index_joint1 <- res_joint1$index_select + 1L
   res_joint2 <- bc_fun_cpp(p_value = pval_vec2, alpha = alpha)
-  index_joint2 <- res_joint2$index_select
+  index_joint2 <- res_joint2$index_select + 1L
   
   for (iter_p in seq_len(3)) {
-    idx_det1 <- which(phylum_vector[index_joint1] == phylum_use[iter_p])
-    idx_det2 <- which(phylum_vector[index_joint2] == phylum_use[iter_p])
+    idx_det1 <- index_joint1[phylum_vector[index_joint1] == phylum_use[iter_p]]
+    idx_det2 <- index_joint2[phylum_vector[index_joint2] == phylum_use[iter_p]]
     idx_inter <- intersect(idx_det1, idx_det2)
     idx_union <- union(idx_det1, idx_det2)
     if (length(idx_union) > 0) {
@@ -106,7 +107,7 @@ for (iter in seq_len(100)) {
     pvalue_list = pvalue_list, alpha_bc = alpha,
     alpha_ebh = alpha
   )
-  index_tmp <- res_weight$index_select
+  index_tmp <- res_weight$index_select + 1L
   index_weight1 <- unlist(index_list)[index_tmp]
   
   pvalue_list <- split(pval_vec2, phylum_vector)
@@ -115,12 +116,12 @@ for (iter in seq_len(100)) {
     pvalue_list = pvalue_list, alpha_bc = alpha,
     alpha_ebh = alpha
   )
-  index_tmp <- res_weight$index_select
+  index_tmp <- res_weight$index_select + 1L
   index_weight2 <- unlist(index_list)[index_tmp]
   
   for (iter_p in seq_len(3)) {
-    idx_det1 <- which(phylum_vector[index_weight1] == phylum_use[iter_p])
-    idx_det2 <- which(phylum_vector[index_weight2] == phylum_use[iter_p])
+    idx_det1 <- index_weight1[phylum_vector[index_weight1] == phylum_use[iter_p]]
+    idx_det2 <- index_weight2[phylum_vector[index_weight2] == phylum_use[iter_p]]
     idx_inter <- intersect(idx_det1, idx_det2)
     idx_union <- union(idx_det1, idx_det2)
     if (length(idx_union) > 0) {
@@ -130,4 +131,5 @@ for (iter in seq_len(100)) {
     }
   }
 }
+saveRDS(out_list, "ApplicationI/results/cdi_schubert_reproducibility.rds")
 lapply(out_list, function(x) round(colMeans(x), 4))

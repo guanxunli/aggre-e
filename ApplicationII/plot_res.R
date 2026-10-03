@@ -1,11 +1,11 @@
 set.seed(1)
 library(ggplot2)
 library(gridExtra)
-n_simu <- 500
+dir.create("ApplicationII/results", recursive = TRUE, showWarnings = FALSE)
 
 ######################## first figure ########################
-ratio <- 5e-2
-signa_stre_vec <- round(seq(0.3, 0.5, length.out = 7), 2)
+ratio <- 2.5e-1
+signa_stre_vec <- c(2.2, 2.35, 2.5, 2.65, 2.8, 2.95, 3.1, 3.25, 3.5)
 n_signa <- length(signa_stre_vec)
 res_mat <- matrix(NA, nrow = n_signa, ncol = 12)
 for (iter_sign in seq_len(n_signa)) {
@@ -14,26 +14,27 @@ for (iter_sign in seq_len(n_signa)) {
     "ApplicationII/results/bhbc_ratio",
     ratio, "sign", signa_stre, ".rds"
   ))
-  res_mat[iter_sign, ] <- colMeans(res_tmp)[seq_len(12)]
+  stopifnot(ncol(res_tmp) == 12) # Rerun simulations if these are old 10-column results.
+  res_mat[iter_sign, ] <- colMeans(res_tmp)
 }
 df_plot1 <- data.frame(
-  power = as.numeric(res_mat[, c(1, 3, 5, 7, 9, 11)]),
-  fdr = as.numeric(res_mat[, c(2, 4, 6, 8, 10, 12)]),
-  method = rep(c("BH", "BC", "eBH_Ave", "eBH_Ada", "fast_eBH_Ada", "ST"), each = n_signa),
-  signa = rep(signa_stre_vec, 6)
+  power = as.numeric(res_mat[, c(1, 3, 5, 7, 9)]),
+  fdr = as.numeric(res_mat[, c(2, 4, 6, 8, 10)]),
+  method = rep(c("BH", "BC", "eBH_Ave", "eBH_Ada", "fast_eBH_Ada"), each = n_signa),
+  signa = rep(signa_stre_vec, 5)
 )
-df_plot1$method <- factor(df_plot1$method, levels = c("BH", "BC", "ST", "eBH_Ave", "eBH_Ada", "fast_eBH_Ada"))
+df_plot1$method <- factor(df_plot1$method, levels = c("BH", "BC", "eBH_Ave", "eBH_Ada", "fast_eBH_Ada"))
 ppower1 <- ggplot(data = df_plot1, aes(x = signa, y = power, color = method)) +
   geom_line(aes(linetype = method), linewidth = 1) +
   geom_point(size = 2) +
-  xlab("Signal strength") +
+  xlab("Mean signal strength") +
   ylab("Power") +
   theme_bw(base_size = 22) +
   theme(legend.position = "none")
 pfdr1 <- ggplot(data = df_plot1, aes(x = signa, y = fdr, color = method)) +
   geom_line(aes(linetype = method), linewidth = 1) +
   geom_point(size = 2) +
-  xlab("Signal strength") +
+  xlab("Mean signal strength") +
   ylab("FDR") +
   geom_hline(yintercept = 0.05, linetype = "dashed") +
   theme_bw(base_size = 22) +
@@ -55,8 +56,8 @@ extract_legend <- function(my_ggp) {
 shared_legend <- extract_legend(p_legend)
 
 ######################## second figure ########################
-ratio <- 2.5e-1
-signa_stre_vec <- seq(0.275, 0.295, by = 0.005)
+ratio <- 0.5
+signa_stre_vec <- c(1.8, 1.85, 1.9, 1.95, 2, 2.05, 2.1, 2.15, 2.2)
 n_signa <- length(signa_stre_vec)
 res_mat <- matrix(NA, nrow = n_signa, ncol = 12)
 for (iter_sign in seq_len(n_signa)) {
@@ -65,15 +66,16 @@ for (iter_sign in seq_len(n_signa)) {
     "ApplicationII/results/bcbh_ratio",
     ratio, "sign", signa_stre, ".rds"
   ))
-  res_mat[iter_sign, ] <- colMeans(res_tmp)[seq_len(12)]
+  stopifnot(ncol(res_tmp) == 12) # Rerun simulations if these are old 10-column results.
+  res_mat[iter_sign, ] <- colMeans(res_tmp)
 }
 df_plot2 <- data.frame(
-  power = as.numeric(res_mat[, c(1, 3, 5, 7, 9, 11)]),
-  fdr = as.numeric(res_mat[, c(2, 4, 6, 8, 10, 12)]),
-  method = rep(c("BH", "BC", "eBH_Ave", "eBH_Ada", "fast_eBH_Ada", "ST"), each = n_signa),
-  signa = rep(signa_stre_vec, 6)
+  power = as.numeric(res_mat[, c(1, 3, 5, 7, 9)]),
+  fdr = as.numeric(res_mat[, c(2, 4, 6, 8, 10)]),
+  method = rep(c("BH", "BC", "eBH_Ave", "eBH_Ada", "fast_eBH_Ada"), each = n_signa),
+  signa = rep(signa_stre_vec, 5)
 )
-df_plot2$method <- factor(df_plot2$method, levels = c("BH", "BC", "ST", "eBH_Ave", "eBH_Ada", "fast_eBH_Ada"))
+df_plot2$method <- factor(df_plot2$method, levels = c("BH", "BC", "eBH_Ave", "eBH_Ada", "fast_eBH_Ada"))
 ppower2 <- ggplot(data = df_plot2, aes(x = signa, y = power, color = method)) +
   geom_line(aes(linetype = method), linewidth = 1) +
   geom_point(size = 2) +

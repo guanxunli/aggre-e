@@ -7,6 +7,7 @@ alpha <- 0.05
 alpha_ebh <- 0.05
 alpha_bh <- alpha_ebh
 alpha_abh <- alpha_ebh
+dir.create("ApplicationI/results", recursive = TRUE, showWarnings = FALSE)
 
 ######################### setting E1 ###########################
 n_vec <- c(1e2, 1e3)
@@ -50,7 +51,7 @@ out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
     pvalue_list, index_alter_list,
     alpha_abh, alpha_ebh
   )
-  round(c(bcj_res, bcs_res, ebh1_res, ebh2_res, ebh3_res), 4)
+  c(bcj_res, bcs_res, ebh1_res, ebh2_res, ebh3_res)
 }
 stopCluster(cl)
 res_mat <- matrix(unlist(out_res), nrow = n_simu, byrow = TRUE)
@@ -114,7 +115,7 @@ out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
     pvalue_list, index_alter_list,
     alpha_abh, alpha_ebh
   )
-  round(c(bcj_res, bcs_res, ebh1_res, ebh2_res, ebh3_res), 4)
+  c(bcj_res, bcs_res, ebh1_res, ebh2_res, ebh3_res)
 }
 stopCluster(cl)
 res_mat <- matrix(unlist(out_res), nrow = n_simu, byrow = TRUE)
@@ -165,7 +166,7 @@ out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
   ## separate BH
   bcs_res <- bc_separate(pvalue_list, index_alter_list, alpha)
   ## naive BH
-  bcsn_res <- bc_separate(pvalue_list, index_alter_list, alpha / 2)
+  bcsn_res <- bc_separate(pvalue_list, index_alter_list, alpha / length(pvalue_list))
   ## ebh weight1
   ebh1_res <- ebh_fun(
     pvalue_list, index_alter_list, list(1, 1, 1, 1),
@@ -185,7 +186,7 @@ out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
     pvalue_list, index_alter_list,
     alpha_abh, alpha_ebh
   )
-  round(c(bcj_res, bcs_res, bcsn_res, ebh1_res, ebh2_res, ebh3_res), 4)
+  c(bcj_res, bcs_res, bcsn_res, ebh1_res, ebh2_res, ebh3_res)
 }
 stopCluster(cl)
 res_mat <- matrix(unlist(out_res), nrow = n_simu, byrow = TRUE)
@@ -231,15 +232,15 @@ out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
   ## generate p-value
   p1 <- c(runif(n_vec[1] - n1_vec[1]), rbeta(n1_vec[1], shape1 = 0.01, shape2 = 5000))
   p2 <- c(runif(n_vec[2] - n1_vec[2]), rbeta(n1_vec[2], shape1 = 0.1, shape2 = 500))
-  p3 <- c(runif(n_vec[3] - n1_vec[3]), rbeta(n1_vec[3], shape1 = 0.2, shape2 = 500))
-  p4 <- c(runif(n_vec[4] - n1_vec[4]), rbeta(n1_vec[4], shape1 = 0.3, shape2 = 500))
+  p3 <- c(runif(n_vec[3] - n1_vec[3]), rbeta(n1_vec[3], shape1 = 0.1, shape2 = 500))
+  p4 <- c(runif(n_vec[4] - n1_vec[4]), rbeta(n1_vec[4], shape1 = 0.1, shape2 = 500))
   pvalue_list <- list(p1, p2, p3, p4)
   ## joint BH
   bcj_res <- bc_joint(pvalue_list, index_alter_list, alpha)
   ## separate BH
   bcs_res <- bc_separate(pvalue_list, index_alter_list, alpha)
   ## naive BH
-  bcsn_res <- bc_separate(pvalue_list, index_alter_list, alpha / 2)
+  bcsn_res <- bc_separate(pvalue_list, index_alter_list, alpha / length(pvalue_list))
   ## ebh weight1
   ebh1_res <- ebh_fun(
     pvalue_list, index_alter_list, list(1, 1, 1, 1),
@@ -259,7 +260,7 @@ out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
     pvalue_list, index_alter_list,
     alpha_abh, alpha_ebh
   )
-  round(c(bcj_res, bcs_res, bcsn_res, ebh1_res, ebh2_res, ebh3_res), 4)
+  c(bcj_res, bcs_res, bcsn_res, ebh1_res, ebh2_res, ebh3_res)
 }
 stopCluster(cl)
 res_mat <- matrix(unlist(out_res), nrow = n_simu, byrow = TRUE)
@@ -317,7 +318,7 @@ out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
   ## separate BH
   bcs_res <- bc_separate(pvalue_list, index_alter_list, alpha)
   ## naive BH
-  bcsn_res <- bc_separate(pvalue_list, index_alter_list, alpha / 2)
+  bcsn_res <- bc_separate(pvalue_list, index_alter_list, alpha / length(pvalue_list))
   ## ebh weight1
   ebh1_res <- ebh_fun(
     pvalue_list, index_alter_list, list(1, 1, 1, 1),
@@ -337,7 +338,7 @@ out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
     pvalue_list, index_alter_list,
     alpha_abh, alpha_ebh
   )
-  round(c(bcj_res, bcs_res, bcsn_res, ebh1_res, ebh2_res, ebh3_res), 4)
+  c(bcj_res, bcs_res, bcsn_res, ebh1_res, ebh2_res, ebh3_res)
 }
 stopCluster(cl)
 res_mat <- matrix(unlist(out_res), nrow = n_simu, byrow = TRUE)

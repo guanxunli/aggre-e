@@ -2,24 +2,24 @@
 library(Rcpp)
 library(RcppArmadillo)
 sourceCpp("ApplicationII/utilities.cpp")
-n_simu <- 500
+n_simu <- 100
 alpha <- alpha_ebh <- 0.05
 alpha_bh <- alpha_ebh / 2
 alpha_bha <- alpha_ebh / (1 + alpha_ebh)
 n <- 1e3
-signa_stre_vec <- round(seq(0.3, 0.5, length.out = 7), 2)
-#### BH > BC setting
-ratio <- 5e-2
+#### BC > BH setting
+ratio <- 0.5
+sd_a <- 0.3
 n1 <- n * ratio
 index_alter <- seq_len(n1)
-signa_stre <- 0.4
-mu <- signa_stre * log(n)
+signa_stre <- 2.2
+mu <- signa_stre
 set.seed(1)
 time_mat <- matrix(NA, nrow = n_simu, ncol = 6)
 for (iter_simu in seq_len(n_simu)) {
   if (iter_simu %% 10 == 0) print(iter_simu)
-  x_all <- c(rnorm(n1, mean = mu, sd = 1), rnorm(n - n1))
-  p_all <- 1 - pnorm(x_all)
+  x_all <- c(rnorm(n1, mean = mu, sd = sd_a), rnorm(n - n1))
+  p_all <- pnorm(x_all, lower.tail = FALSE)
   ## BH
   time1 <- Sys.time()
   bh_res <- bh_fun_cpp(p_all, alpha = alpha)
@@ -65,7 +65,7 @@ for (iter_simu in seq_len(n_simu)) {
   fastbhbcada_res <- fastbhbc_ada(p_all, alpha_bh = alpha_bha, alpha_ebh = alpha_ebh)
   indexbhbcadaf <- fastbhbcada_res$index_select + 1
   fastbhbcada_res <- numeric(2)
-  if (length(indexbhbcada) > 0) {
+  if (length(indexbhbcadaf) > 0) {
     fastbhbcada_res[1] <- length(intersect(indexbhbcadaf, index_alter)) / length(index_alter)
     fastbhbcada_res[2] <- length(setdiff(indexbhbcadaf, index_alter)) / length(indexbhbcadaf)
   }

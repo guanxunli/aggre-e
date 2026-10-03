@@ -4,12 +4,13 @@ library(gridExtra)
 n_simu <- 100
 a0_vec <- c(3.5, 2.5, 1.5)
 a1_vec <- c(1.5, 2, 2.5)
-signa_sten_vec <- seq(2.5, 3.4, by = 0.15)
+signa_sten_vec <- seq(1.9, 3.4, by = 0.15)
 n_signa <- length(signa_sten_vec)
 method_vec <- c(
-  "BH", "IHW_storey", "IHW_betamix", "adaPT", "SABHA", "eBH_FBC"
+  "BH", "IHW", "adaPT", "SABHA", "eBH_FBC"
 )
 n_method <- length(method_vec)
+dir.create("ApplicationIII/simu2/results/figures", recursive = TRUE, showWarnings = FALSE)
 
 ######################## plot one figures ########################
 df_plot_all <- NULL
@@ -24,8 +25,8 @@ for (a0 in a0_vec) {
         "ApplicationIII/simu2/results/a0", a0, "a1", a1,
         "sign", signa_stre, ".rds"
       ))
-      res_mat[iter_sign, ] <- colMeans(res_tmp)[-c(3, 4)]
-      sd_mat[iter_sign, ] <- apply(res_tmp, 2, sd)[-c(3, 4)]
+      res_mat[iter_sign, ] <- colMeans(res_tmp)
+      sd_mat[iter_sign, ] <- apply(res_tmp, 2, sd)
     }
     df_plot <- data.frame(
       power = as.numeric(res_mat[, seq(1, 2 * n_method, by = 2)]),

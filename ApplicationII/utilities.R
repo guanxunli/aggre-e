@@ -20,6 +20,7 @@ bc_fun <- function(p_all, index_alter, alpha = 0.05) {
       index_select <- NULL
     } else {
       p_tmp <- ordered_p[iter]
+      if (p_tmp >= 0.5) next
       n_num <- 1 + sum(p_all >= 1 - p_tmp)
       n_dom <- max(1, sum(p_all <= p_tmp))
       hat_fdp <- n_num / n_dom
@@ -47,7 +48,8 @@ bhbc_fun <- function(p_all, index_alter, alpha_bh = 0.05, alpha_ebh = 0.05) {
   p_adj <- p.adjust(p_all, method = "BH")
   index_select_bh <- which(p_adj <= alpha_bh)
   if (length(index_select_bh) > 0) {
-    e_tmp_bh <- 1 / max(p_all[index_select_bh])
+    tau_bh <- alpha_bh * length(index_select_bh) / n
+    e_tmp_bh <- 1 / tau_bh
     evalue_bh[index_select_bh] <- e_tmp_bh
   }
 
@@ -60,6 +62,7 @@ bhbc_fun <- function(p_all, index_alter, alpha_bh = 0.05, alpha_ebh = 0.05) {
       index_select_bc <- NULL
     } else {
       p_tmp <- ordered_p[iter]
+      if (p_tmp >= 0.5) next
       n_num <- 1 + sum(p_all >= 1 - p_tmp)
       n_dom <- max(1, sum(p_all <= p_tmp))
       hat_fdp <- n_num / n_dom
@@ -121,7 +124,8 @@ bhbc_cross <- function(p_all, index_alter, n_try = 1, n_split = 2,
       p_adj <- p.adjust(puse, method = "BH")
       index_select_bh <- which(p_adj <= alpha_bh)
       if (length(index_select_bh) > 0) {
-        e_tmp_bh <- 1 / max(puse[index_select_bh])
+        tau_bh <- alpha_bh * length(index_select_bh) / nuse
+        e_tmp_bh <- 1 / tau_bh
       }
       ebh_group[iter_g] <- e_tmp_bh
       etmp_bh_vec[index_select_bh] <- e_tmp_bh
@@ -132,6 +136,7 @@ bhbc_cross <- function(p_all, index_alter, n_try = 1, n_split = 2,
       ordered_p <- sort(puse, decreasing = TRUE)
       for (iter_use in seq_len(nuse)) {
         p_tmp <- ordered_p[iter_use]
+        if (p_tmp >= 0.5) next
         n_num <- 1 + sum(puse >= 1 - p_tmp)
         n_dom <- max(1, sum(puse <= p_tmp))
         hat_fdp <- n_num / n_dom
@@ -156,18 +161,20 @@ bhbc_cross <- function(p_all, index_alter, n_try = 1, n_split = 2,
       p_adj <- p.adjust(puse, method = "BH")
       index_select_bh <- which(p_adj <= alpha_bh)
       if (length(index_select_bh) > 0) {
-        e_tmp_bh <- 1 / max(puse[index_select_bh])
+        tau_bh <- alpha_bh * length(index_select_bh) / nuse
+        e_tmp_bh <- 1 / tau_bh
       }
       ## bc method
       e_tmp_bc <- 0
       ordered_p <- sort(puse, decreasing = TRUE)
       for (iter_use in seq_len(nuse)) {
         p_tmp <- ordered_p[iter_use]
+        if (p_tmp >= 0.5) next
         n_num <- 1 + sum(puse >= 1 - p_tmp)
         n_dom <- max(1, sum(puse <= p_tmp))
         hat_fdp <- n_num / n_dom
         if (hat_fdp <= alpha_bh) {
-          e_tmp_bc <- nuse / (1 + sum(p_all >= 1 - p_tmp))
+          e_tmp_bc <- nuse / (1 + sum(puse >= 1 - p_tmp))
           break
         }
       }
@@ -195,7 +202,7 @@ bhbc_cross <- function(p_all, index_alter, n_try = 1, n_split = 2,
     }
     evalue_mat[iter_try, ] <- evalue
   }
-  eavlue <- colMeans(evalue_mat)
+  evalue <- colMeans(evalue_mat)
   ## e-BH
   orderd_evalue <- sort(evalue, decreasing = TRUE)
   for (iter in seq(n, 0, by = -1)) {

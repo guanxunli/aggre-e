@@ -12,7 +12,7 @@ n_method <- length(method_vec)
 plot_list <- list()
 for (iter_dta in seq_len(n_dta)) {
   dtaname_use <- dataset_vec[iter_dta]
-  res <- readRDS(paste0("ApplicationIII/real_data/results/", dtaname_use, "_res.rds"))
+  res <- readRDS(paste0("ApplicationIII/realdata/results/", dtaname_use, "_res.rds"))
   df_plot <- data.frame(
     n_rej = as.numeric(res),
     method = rep(method_vec, n_alpha),
@@ -37,8 +37,8 @@ combined <- wrap_plots(plotlist = plot_list, nrow = 1, guides = "collect") &
   theme(legend.position = "bottom")
 
 # save the combined figure
-dir.create("ApplicationIII/real_data/results/figures", recursive = TRUE, showWarnings = FALSE)
-ggsave("ApplicationIII/real_data/results/figures/combined_three_datasets.pdf",
+dir.create("ApplicationIII/realdata/results/figures", recursive = TRUE, showWarnings = FALSE)
+ggsave("ApplicationIII/realdata/results/figures/combined_three_datasets.pdf",
   combined,
   width = 16, height = 6
 )

@@ -2,28 +2,41 @@ library(parallel)
 library(doParallel)
 library(doRNG)
 ## define parameters
-n_simu <- 500
-n_cores <- 50
+n_cores <- 10
 alpha <- alpha_ebh <- 0.05
 alpha_bh <- alpha_ebh / 2
 alpha_bha <- alpha_ebh / (1 + alpha_ebh)
-n <- 1e3
-signa_stre_vec <- round(seq(0.3, 0.5, length.out = 7), 2)
-ratio <- 5e-2
+n_simu <- 100 # Total repetitions per signal strength.
+seed <- 2026092301
+n <- 1000
+ratio <- 0.5
+sd_a <- 0.3
+signa_stre_vec <- c(1.8, 1.85, 1.9, 1.95, 2, 2.05, 2.1, 2.15, 2.2)
 n1 <- n * ratio
 index_alter <- seq_len(n1)
-for (signa_stre in signa_stre_vec) {
+dir.create("ApplicationII/results", recursive = TRUE, showWarnings = FALSE)
+
+cl <- makeCluster(n_cores)
+registerDoParallel(cl)
+# Load the C++ functions once in each worker.
+clusterEvalQ(cl, {
+  library(Rcpp)
+  library(RcppArmadillo)
+  sourceCpp("ApplicationII/utilities.cpp")
+  NULL
+})
+RNGkind("L'Ecuyer-CMRG")
+for (iter_sign in seq_along(signa_stre_vec)) {
+  signa_stre <- signa_stre_vec[iter_sign]
+  mu <- signa_stre # Actual mean; do not multiply by log(n).
   print(signa_stre)
-  mu <- signa_stre * log(n)
-  set.seed(2024)
-  cl <- makeCluster(n_cores)
-  registerDoParallel(cl)
-  out_res <- foreach(iter_simu = seq_len(n_simu)) %dorng% {
-    library(Rcpp)
-    library(RcppArmadillo)
-    sourceCpp("ApplicationII/utilities.cpp")
-    x_all <- c(rnorm(n1, mean = mu, sd = 1), rnorm(n - n1))
-    p_all <- 1 - pnorm(x_all)
+  set.seed(seed + 20000 + iter_sign * 100) # Derive each grid point from the single base seed.
+  out_res <- foreach(iter_simu = seq_len(n_simu),
+                     .noexport = c("bh_fun_cpp", "bc_fun_cpp", "bhbc_fix", "bhbc_ada",
+                                   "fastbhbc_ada", "storey_fun_cpp")) %dorng% {
+    ## generate p-values
+    x_all <- c(rnorm(n1, mean = mu, sd = sd_a), rnorm(n - n1))
+    p_all <- pnorm(x_all, lower.tail = FALSE)
     ## BH
     bh_res <- bh_fun_cpp(p_all, alpha = alpha)
     indexbh <- bh_res$index_select + 1
@@ -60,7 +73,7 @@ for (signa_stre in signa_stre_vec) {
     fastbhbcada_res <- fastbhbc_ada(p_all, alpha_bh = alpha_bha, alpha_ebh = alpha_ebh)
     indexbhbcadaf <- fastbhbcada_res$index_select + 1
     fastbhbcada_res <- numeric(2)
-    if (length(indexbhbcada) > 0) {
+    if (length(indexbhbcadaf) > 0) {
       fastbhbcada_res[1] <- length(intersect(indexbhbcadaf, index_alter)) / length(index_alter)
       fastbhbcada_res[2] <- length(setdiff(indexbhbcadaf, index_alter)) / length(indexbhbcadaf)
     }
@@ -72,12 +85,17 @@ for (signa_stre in signa_stre_vec) {
       storey_res[1] <- length(intersect(index_storey, index_alter)) / length(index_alter)
       storey_res[2] <- length(setdiff(index_storey, index_alter)) / length(index_storey)
     }
-    round(c(bh_res, bc_res, bhbc_res, bhbcada_res, fastbhbcada_res, storey_res), 4)
+    c(bh_res, bc_res, bhbc_res, bhbcada_res, fastbhbcada_res, storey_res)
   }
-  stopCluster(cl)
   res_mat <- matrix(unlist(out_res), nrow = n_simu, byrow = TRUE)
+  colnames(res_mat) <- c("BH.power", "BH.FDP", "BC.power", "BC.FDP",
+                         "eBH_Ave.power", "eBH_Ave.FDP", "eBH_Ada.power", "eBH_Ada.FDP",
+                         "fast_eBH_Ada.power",
+                         "fast_eBH_Ada.FDP", "ST.power", "ST.FDP")
   saveRDS(res_mat, paste0(
-    "ApplicationII/results/bhbc_ratio", ratio, "sign", signa_stre, ".rds"
+    "ApplicationII/results/bcbh_ratio", ratio, "sign", signa_stre, ".rds"
   ))
   print(round(colMeans(res_mat), 4))
 }
+stopCluster(cl)
+registerDoSEQ()
